@@ -1,13 +1,17 @@
-package com.example.familytracker
+package com.example.unitrackerv12
 
 import android.util.Log
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.CollectionReference
 import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.FieldValue
 
 import java.time.LocalDateTime
 
 val db: FirebaseFirestore = FirebaseFirestore.getInstance()
+var auth: FirebaseAuth = FirebaseAuth.getInstance()
 
 val TAG = "DEBUG"
 
@@ -19,9 +23,9 @@ class Position(longitude: Double, latitude: Double)
  */
 {
     init {
-        val time =  LocalDateTime.now() // ERROR: THIS FUNCTION REQUIRE: API level 26 (in use: 23)
         val longitude: Double = longitude
         val latitude: Double = latitude
+        val time =  LocalDateTime.now() // ERROR: THIS FUNCTION REQUIRE: API level 26 (in use: 23)
     }
 }
 
@@ -29,10 +33,11 @@ class User
 {
     var name: String? = null
     var email: String? = null // change to a more suitable data type
+    lateinit var lastPosition: Position
     var positions: Map<String, Position>? = null
     var trackedGroups: Set<String>? = null // reference to tracked groups
     var belongGroups: Set<String>? = null // reference to groups that this user belong
-    var document: DocumentReference? = null  //refence to user document
+    private lateinit var document: DocumentReference  //refence to user document
 
     constructor(userid: String)
     {
@@ -45,42 +50,45 @@ class User
         this.document = User.collection.document(userid)
     }
 
-    constructor(name: String, email: String)
-    /*
-     * Create a new user
-     */
-    {
-        this.name = name
-        this.email = email
-        this.document = User.collection.document()
-    }
-
     fun addPosition(position: Position)
     /*
      * Add a position of a user
      */
-    {}
+    {
+        this.lastPosition = position
+        this.document.update("lastPosition", position)
+        this.document.collection("positions").add(position)
+            .addOnSuccessListener { Log.d(TAG, "New position successfully added!") }
+            .addOnFailureListener {  e -> Log.w(TAG, "Error adding position document", e)}
+    }
 
     companion object{
         @JvmField
         val collection: CollectionReference = db.collection("users")
 
-        @JvmStatic fun add(user: User)
+        @JvmStatic fun createWithEmailAndPassword(email:String, password: String): User
         /*
-         * Add a user (document) to users firebase collection
+         * Create an user with (email, password)
          */
         {
-            User.collection.add(user)
+            auth.createUserWithEmailAndPassword(email, password)
+            var user = auth.currentUser
+            return User(user!!.uid)
         }
         @JvmStatic fun remove(userid: String)
         /*
-         * Remove a user (document) from users firebase collection
+         * Remove a user from users firebase collection
          */
         {
             User.collection.document(userid)
                 .delete()
                 .addOnSuccessListener { Log.d(TAG, "User was successfully deleted") }
                 .addOnFailureListener { e -> Log.w(TAG, "Error deleting document", e) }
+        }
+        @JvmStatic fun getCurrentUser(): User
+        {
+            val user: FirebaseUser? = auth.currentUser
+            return User(user!!.uid)
         }
     }
 }
@@ -98,10 +106,8 @@ class Group
     constructor(groupId: String)
     {
         Group.collection.document(groupId).get()
-            .addOnSuccessListener { doc ->
-                // Init group with data of firebase
-                // SOME STUFF
-                val x=0
+            .addOnSuccessListener { document ->
+                Log.d(TAG, "DocumentSnapshot data: ${document.data}")
             }
         this.document = Group.collection.document(groupId)
     }
@@ -110,42 +116,67 @@ class Group
         this.name = name
         this.admins = admins
         this.users = users
-        this.document = Group.collection.document()
+
+        var data = mapOf(
+            name to this.name,
+            admins to this.admins,
+            users to this.users
+        )
+
+        Group.collection.add(data)
+            .addOnSuccessListener { doc ->
+                this.document = doc
+            }
     }
 
     fun addAdmin(userid: String)
     /*
      * Add an user to admins
      */
-    {}
+    {
+        this.document?.update("admins", FieldValue.arrayUnion(userid))
+    }
 
     fun removeAdmin(userid: String)
     /*
      * Remove the user with userid from the admins
      */
-    {}
+    {
+        this.document?.update("admins", FieldValue.arrayRemove(userid))
+    }
 
     fun addAUser(userid: String)
     /*
      * Add an user to users
      */
-    {}
+    {
+        this.document?.update("users", FieldValue.arrayUnion(userid))
+    }
 
     fun removeUser(userid: String)
     /*
      * Remove the user with userid from the users
      */
-    {}
+    {
+        this.document?.update("users", FieldValue.arrayRemove(userid))
+    }
 
 
-    fun positions(): Map<User, Position>
+    fun lastPositions(): Map<User, Position>
     /*
      * Return the last position of all the member of this group
      */
     {
         val lastUserPositions: Map<User, Position> = HashMap<User, Position>()
 
-        // MORE STUFF
+        this.document?.get()
+            ?.addOnSuccessListener { document ->
+                //SOMETHING
+                Log.d(TAG, "DocumentSnapshot data: ${document.data}")
+            }
+            ?.addOnFailureListener { exception ->
+                Log.d(TAG, "get failed with ", exception)
+            }
 
         return lastUserPositions
     }

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+//import com.example.familytracker.Position
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -22,6 +23,12 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
+
+import com.example.unitrackerv12.Group
+import com.example.unitrackerv12.User
+import com.example.unitrackerv12.Position
+
+
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -147,6 +154,26 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         //-------------------------------FIREBASE---------------------------------------------
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
+                if (locationResult.locations.isNotEmpty()){
+                    val location = locationResult.lastLocation
+                    var position = Position(location.longitude, location.latitude)
+
+                    // ONLY FOR TEST - REMOVE THIS LINE WHEN SignIn is implemented
+                    auth.signInWithEmailAndPassword("test@example.com", "password")
+
+                    val user: User = User.getCurrentUser()
+                    user.addPosition(position)
+
+
+                    if (location != null) {
+                        val latLng = LatLng(location.latitude, location.longitude)
+                        val markerOptions = MarkerOptions().position(latLng)
+                        mMap.addMarker(markerOptions)
+                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+                    }
+                }
+
+                /*
                 if (locationResult.locations.isNotEmpty()) {
                     val location = locationResult.lastLocation
                     lateinit var databaseRef: DatabaseReference
@@ -168,6 +195,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                     }
                 }
+                 */
             }
         }
     }
@@ -175,6 +203,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     //FIREBASE: Pedir los datos y error en leer bdFirebase
     val logListener = object : ValueEventListener {
         //FIREBASE: Pedir datos a la bd
+        //val user: User = User.getCurrentUser()
+
         override fun onDataChange(dataSnapshot: DataSnapshot) {
             if (dataSnapshot.exists()) {
                 //MODIFICAR referencia en bdFirebase
