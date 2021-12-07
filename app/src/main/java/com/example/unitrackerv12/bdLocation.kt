@@ -1,8 +1,8 @@
 package com.example.unitrackerv12
 
 import com.google.firebase.database.IgnoreExtraProperties
-@IgnoreExtraProperties
 
+@IgnoreExtraProperties
 data class bdLocation(
     var uName: String?,
     var Latitude: Double? = 0.0,

@@ -1,14 +1,12 @@
 package com.example.unitrackerv12
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -17,7 +15,6 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.example.unitrackerv12.databinding.ActivityMapsBinding
 import com.google.android.gms.location.*
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.firebase.database.*
 import com.google.firebase.database.ktx.database
@@ -67,27 +64,27 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     
     //COMPROBAR PERMISOS
     private fun getLocationAccess() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             mMap.isMyLocationEnabled = true
             getLocationUpdates()
             startLocationUpdates()
         }
         else
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST)
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         super.onCreate(savedInstanceState)
 
         binding = ActivityMapsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        //
         val mapFragment = supportFragmentManager
             .findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
 
         //
         databaseRef = Firebase.database.reference
@@ -96,6 +93,10 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
+
+        //
+        mMap.uiSettings.isZoomControlsEnabled = true
+
         getLocationAccess()
         //createMarker()
     }
@@ -139,8 +140,8 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
     //FIREBASE: Enviar datos a la bd
     private fun getLocationUpdates() {
         locationRequest = LocationRequest.create()
-        locationRequest.interval = 30000
-        locationRequest.fastestInterval = 20000
+        locationRequest.interval = 5000
+        locationRequest.fastestInterval = 2000
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
 
@@ -165,7 +166,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                         val latLng = LatLng(location.latitude, location.longitude)
                         val markerOptions = MarkerOptions().position(latLng)
                         mMap.addMarker(markerOptions)
-                        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+                        //mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
                     }
                 }
             }
