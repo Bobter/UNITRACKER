@@ -1,5 +1,6 @@
 package com.example.unitrackerv12
 
+
 import android.util.Log
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
@@ -10,8 +11,11 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.auth.User
 import com.google.type.DateTime
+import com.squareup.okhttp.internal.DiskLruCache
 
 import java.time.LocalDateTime
+
+// date: Dec 9 2021
 
 val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 var auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -37,29 +41,6 @@ data class User(
 
 class UserManager
 {
-    /*
-    var uid: String? = null
-    var name: String? = null
-    var email: String? = null // change to a more suitable data type
-    var lastPosition: Position? = null
-    var positions: Map<String, Position>? = null
-    var trackedGroups: List<String>? = null // reference to tracked groups
-    var belongGroups: List<String>? = null // reference to groups that this user belong
-    private lateinit var document: DocumentReference  //refence to user document
-
-
-    fun addPosition(position: Position)
-    /*
-     * Add a position of a user (REPLACED BY User.addPosition static method)
-     */
-    {
-        this.lastPosition = position
-        this.document.update("lastPosition", position)
-        this.document.collection("positions").add(position)
-            .addOnSuccessListener { Log.d(TAG, "New position successfully added!") }
-            .addOnFailureListener {  e -> Log.w(TAG, "Error adding position document", e)}
-    }
-*/
     companion object{
         @JvmField
         val collection: CollectionReference = db.collection("users")
@@ -82,10 +63,10 @@ class UserManager
                  */
         {
             var document = UserManager.collection.document(userid)
-            var trackedGroups = listOf<String>()
-            var belongGroups = listOf<String>()
+            //var trackedGroups = listOf<String>()
+            //var belongGroups = listOf<String>()
             //lastPosition = null
-            var positions = mapOf<String, Position>()
+            //var positions = mapOf<String, Position>()
 
             document.set(
                 mapOf(
@@ -109,6 +90,11 @@ class UserManager
                 .delete()
                 .addOnSuccessListener { Log.d(TAG, "User was successfully deleted") }
                 .addOnFailureListener { e -> Log.w(TAG, "Error deleting document", e) }
+        }
+
+        @JvmStatic fun leftGroup(user: FirebaseUser, groupid: String)
+        {
+
         }
 
         @JvmStatic fun positions(user: FirebaseUser): List<Position>
@@ -196,104 +182,18 @@ class GroupManager
  * Group to tracking several users
  */ {
 
-    /*
-    var name: String? = null
-    lateinit var groupid: String
-    var admins: Set<String>? = null // reference to trackers
-    var users: Set<String>? = null  // reference to tracked users
-    var document: DocumentReference? = null
-
-    constructor(groupid: String)
-    {
-        this.groupid = groupid
-        GroupManager.collection.document(groupid).get()
-            .addOnSuccessListener { document ->
-                Log.d(TAG, "DocumentSnapshot data: ${document.data}")
-            }
-        this.document = GroupManager.collection.document(groupid)
-    }
-    constructor(name:String, admins: Set<String>, users: Set<String>)
-    {
-        this.name = name
-        this.admins = admins
-        this.users = users
-
-        var data = mapOf(
-            name to this.name,
-            admins to this.admins,
-            users to this.users
-        )
-
-        Group.collection.add(data)
-            .addOnSuccessListener { doc ->
-                this.document = doc
-            }
-    }
-    */
-
-    /*
-    fun addAdmin(userid: String)
-            /*
-             * Add an user to admins
-             */
-    {
-        this.document?.update("admins", FieldValue.arrayUnion(userid))
-    }
-
-    fun removeAdmin(userid: String)
-            /*
-             * Remove the user with userid from the admins
-             */
-    {
-        this.document?.update("admins", FieldValue.arrayRemove(userid))
-    }
-
-    fun addAUser(userid: String)
-            /*
-             * Add an user to users
-             */
-    {
-        this.document?.update("users", FieldValue.arrayUnion(userid))
-    }
-
-    fun removeUser(userid: String)
-            /*
-             * Remove the user with userid from the users
-             */
-    {
-        this.document?.update("users", FieldValue.arrayRemove(userid))
-    }
-
-
-    fun lastPositions(): Map<User, Position>
-            /*
-             * Return the last position of all the member of this group
-             */
-    {
-        val lastUserPositions: Map<User, Position> = HashMap<User, Position>()
-
-        this.document?.get()
-            ?.addOnSuccessListener { document ->
-                //SOMETHING
-                Log.d(TAG, "DocumentSnapshot data: ${document.data}")
-            }
-            ?.addOnFailureListener { exception ->
-                Log.d(TAG, "get failed with ", exception)
-            }
-
-        return lastUserPositions
-    }
-    */
-
     companion object{
         @JvmField
         val collection: CollectionReference = db.collection("groups")
 
-        @JvmStatic fun create(name: String, admins: List<String>? = null, users: List<String>? = null): Group?
+        @JvmStatic fun create(name: String): Group?
                 /*
                  * Create a group (document) to DB
                  */
         {
+            var userid: String? = auth.currentUser?.uid
+            var admins: List<String> = listOf(userid!!)
+            var users: List<String> = listOf()
             var group: Group? = null
             GroupManager.collection.add(
                 mapOf(
@@ -310,6 +210,81 @@ class GroupManager
             return group
         }
 
+        @JvmStatic fun isAdmin(groupid: String, userid: String): Boolean
+                /*
+                 * Check if a user is an administrator of the group
+                 */
+        {
+            var belong: Boolean = false
+
+            GroupManager.collection.document(groupid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    var admins = doc.data!!.get("admins")
+                    Log.d(TAG, "admins: ${admins}")
+                    /*
+                    if (userid in admins)
+                    {
+                        belong = true
+                    }
+                     */
+                }
+
+            return belong
+        }
+
+        @JvmStatic fun isUser(groupid: String, userid: String): Boolean
+                /*
+                 * Check if a user belong to the a group
+                 */
+        {
+            var belong: Boolean = false
+
+            GroupManager.collection.document(groupid)
+                .get()
+                .addOnSuccessListener { doc ->
+                    var rawadmins = doc.data!!.get("admins")
+                    Log.d(TAG, "admins: ${rawadmins}")
+                    //admins = doc.data.get('admins')
+                }
+
+            return belong
+        }
+
+        @JvmStatic fun users(groupid: String): List<String>
+                /*
+                 * Return the tracked users of a group
+                 */
+        {
+
+            var users: List<String> = listOf()
+            // SOME STUFF
+
+            return users
+        }
+
+        @JvmStatic fun addAdmin(groupid: String, userid: String)
+                /*
+                 * Add an user to admins
+                 */
+        {
+            var userid: String = auth.currentUser!!.uid
+            if(GroupManager.isAdmin(groupid, userid)) {
+                GroupManager.collection.document(groupid).update("admins", FieldValue.arrayUnion(userid))
+            }
+        }
+
+        @JvmStatic fun addUser(groupid: String, userid: String)
+                /*
+                 * Add an user to users
+                 */
+        {
+            var userid: String = auth.currentUser!!.uid
+            if(GroupManager.isAdmin(groupid, userid)) {
+                GroupManager.collection.document(groupid).update("users", FieldValue.arrayUnion(userid))
+            }
+        }
+
         @JvmStatic fun remove(groupid: String)
                 /*
                  * Remove a group (document) from groups firebase collection
@@ -321,19 +296,28 @@ class GroupManager
                 .addOnFailureListener { e -> Log.w(TAG, "Error deleting document", e) }
         }
 
-        @JvmStatic fun lastPositions(group: Group): Map<User, Position>
+        @JvmStatic fun lastPositions(groupid: String): Map<User, Position>
                 /*
                  * Return the last position of all the users of this group
                  */
         {
             var last_positions: Map<User, Position> = mapOf<User, Position>()
-            for(userid in group.users!!)
+
+            var userid: String = auth.currentUser!!.uid
+
+            if (GroupManager.isAdmin(groupid, userid))
             {
-                var user: User? = UserManager.get(userid)
-                if(user != null)
+                /*
+                for(userid in group.users!!)
                 {
-                    //last_positions[user] = user.lastPosition
+                    var user: User? = UserManager.get(userid)
+                    if(user != null)
+                    {
+                        //last_positions[user] = user.lastPosition
+                    }
                 }
+
+                 */
             }
 
             return last_positions

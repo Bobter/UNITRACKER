@@ -16,6 +16,7 @@ import kotlinx.android.synthetic.main.activity_signup.SU_Notificar
 import kotlinx.android.synthetic.main.activity_signup.SU_Password
 import kotlinx.android.synthetic.main.activity_signup.SignIn
 import kotlinx.android.synthetic.main.activity_signup.buttonReg
+import com.example.unitrackerv12.UserManager
 
 class SignUpActivity: AppCompatActivity() {
 
@@ -46,6 +47,7 @@ class SignUpActivity: AppCompatActivity() {
                             SU_Notificar.text =
                                 "Usuario creado"
                             val user = auth.currentUser
+                            UserManager.init(user!!.uid.toString(), SU_Email.text.toString())
                             updateUI(user)
                         } else {
                             SU_Notificar.text = "Hubo un error, por favor, vuelve a intentar."
