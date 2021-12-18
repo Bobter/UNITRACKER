@@ -202,35 +202,41 @@ class GroupManager
             return group
         }
 
-        @JvmStatic fun get(groupid: String, callback: (data: GroupData?) -> Unit): Task<DocumentSnapshot> {
+        @JvmStatic fun get(groupid: String): GroupData?
+        {
             var data: GroupData? = null
 
-            return GroupManager.collection.document(groupid).get()
+            var doc = GroupManager.collection.document(groupid)
+            doc.get()
                 .addOnSuccessListener { documentSnapshot ->
                     data = documentSnapshot.toObject(GroupData::class.java)
                     Log.d(TAG, "Group ${groupid}: ${data}")
                 }
+            return data
         }
 
-        @JvmStatic fun isAdmin(groupid: String, userid: String, callback: (belong: Boolean) -> Unit)
+
+        @JvmStatic fun isAdmin(groupid: String, userid: String): Boolean
                 /*
                  * Check if a user is an administrator of the group
                  */
         {
             var belong: Boolean = false
 
-            GroupManager.get(groupid){ data ->
-                if(data != null)
-                {
-                    for(admin in data.admins!!) {
-                        if (admin == userid)
-                        {
-                            belong = true
-                            break
-                        }
+            var data: GroupData? = GroupManager.get(groupid)
+            if(data != null)
+            {
+                for(admin in data.admins!!) {
+                    if (admin == userid)
+                    {
+                        belong = true
+                        break
                     }
                 }
             }
+
+            return belong
+
         }
 
         @JvmStatic fun isUser(groupid: String, userid: String): Boolean
@@ -264,7 +270,6 @@ class GroupManager
             return groupData!!.users!!
         }
 
-        /*
         @JvmStatic fun addAdmin(groupid: String, userid: String)
         /*
          * Add an user to admins
@@ -297,8 +302,6 @@ class GroupManager
                 Log.d(TAG, "Solo administradores pueden agregar otros usuarios")
             }
         }
-
-         */
 
         @JvmStatic fun remove(groupid: String)
                 /*
